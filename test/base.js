@@ -30,4 +30,25 @@ describe("base", () => {
             v: 1
         }).v, 1);
     });
+
+    it("bad0", (done) => {
+        try {
+            let cmdJson = CmdJson({
+                add: 123
+            });
+        } catch (err) {
+            done();
+        }
+    });
+
+    it("bad1", (done) => {
+        try {
+            let cmdJson = CmdJson({
+                add: (x, y) => x + y
+            });
+            cmdJson(["$[sub]", 1, 2])
+        } catch (err) {
+            done();
+        }
+    });
 });
