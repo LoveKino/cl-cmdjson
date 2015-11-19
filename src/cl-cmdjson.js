@@ -7,50 +7,71 @@
  * 
  */
 
-module.exports = (cmdMap, opts) => {
+module.exports = (opts) => {
     opts = merge({
         cmdNameReg: /^\$\[(.*)\]$/
-    }, opts)
-    checkCmdMap(cmdMap);
+    }, opts);
 
-    let getValue = (jsonCmd) => {
-        let res = parseJsonCmd(opts.cmdNameReg, jsonCmd);
-        if (res === false) {
-            return jsonCmd;
-        } else {
-            let {
-                cmdName, args
-            } = res;
-            let fun = cmdMap[cmdName];
-            if (!fun)
-                throw new Error(`Missing function definition for cmd ${cmdName}`);
-            for (let i = 0; i < args.length; i++) {
-                args[i] = getValue(args[i]);
+    let  cmdNameReg = opts.cmdNameReg;
+    
+    let cmdJson = (cmdMap) => {
+        checkCmdMap(cmdMap);
+
+        let getValue = (jsonCmd) => {
+            let res = parseJsonCmd(jsonCmd);
+            if (res === false) {
+                return jsonCmd;
+            } else {
+                let {
+                    cmdName, args
+                } = res;
+                let fun = cmdMap[cmdName];
+                if (!fun)
+                    throw new Error(`Missing function definition for cmd ${cmdName}`);
+                for (let i = 0; i < args.length; i++) {
+                    args[i] = getValue(args[i]);
+                }
+                return fun.apply(undefined, args);
             }
-            return fun.apply(undefined, args);
         }
+
+        return getValue;
     }
 
-    return getValue;
-}
+    let parseJsonCmd = (jsonCmd) => {
+        if (!isJsonCmd(jsonCmd))
+            return false;
 
-let parseJsonCmd = (cmdNameReg, jsonCmd) => {
-    if (!isArray(jsonCmd))
-        return false;
+        let cmdName = jsonCmd[0];
+        let arr = cmdNameReg.exec(cmdName);
 
-    let cmdName = jsonCmd[0];
-    if (typeof cmdName !== "string")
-        return false;
+        return {
+            cmdName: arr[1],
+            args: jsonCmd.slice(1)
+        };
+    }
 
-    let arr = cmdNameReg.exec(cmdName);
+    let isJsonCmd = (jsonCmd) => {
+        if (!isArray(jsonCmd))
+            return false;
 
-    if (!arr)
-        return false;
+        let cmdName = jsonCmd[0];
+        if (typeof cmdName !== "string")
+            return false;
 
-    return {
-        cmdName: arr[1],
-        args: jsonCmd.slice(1)
-    };
+        let arr = cmdNameReg.exec(cmdName);
+
+        if (!arr)
+            return false;
+
+        return true;
+    }
+
+    // export two
+    cmdJson.isJsonCmd = isJsonCmd;
+    cmdJson.parseJsonCmd = parseJsonCmd;
+
+    return cmdJson;
 }
 
 let checkCmdMap = (cmdMap) => {
